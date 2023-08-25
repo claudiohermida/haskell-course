@@ -53,3 +53,28 @@ still need to make another choice.
 
 6. Adapt adapt "solveMaze" function to use "showCurrentChoice" and play with your new game using GHCi! :D
 -}
+
+import Data.List (isPrefixOf)
+
+
+data Move = GoRight | GoLeft | GoForward deriving (Eq)
+
+type Maze = [Move]
+
+move:: Maze -> Move -> Maze
+
+move maze move = maze ++ [move]
+
+testMaze = [GoLeft,GoRight,GoForward] :: Maze
+
+solveMaze':: Maze -> [Move] -> (Maze,String)
+
+solveMaze' maze moves
+        |  moves == maze = ([],"YOU'VE FOUND THE EXIT!!")
+        | moves `isPrefixOf` maze = (subtractSublist maze moves,"You're still inside the maze. Choose a path, brave adventurer: GoLeft, GoRight, or GoForward.")
+        | otherwise = (moves,"You've hit a WALL!")
+         where 
+             subtractSublist xs ys = [x | x <- xs, x `notElem` ys]
+
+solveMaze:: Maze -> [Move] -> String
+solveMaze maze moves = snd (solveMaze' maze moves)

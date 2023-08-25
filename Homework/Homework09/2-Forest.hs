@@ -42,3 +42,47 @@ Using GHCi, like the "Maze" game, this game should look like this:
 *Main> solveForest testForest [GoForward, GoLeft , GoRight]
 "YOU'VE FOUND THE EXIT!!"
 -}
+
+{- import Data.List (isPrefixOf) -}
+
+
+data Move = GoRight | GoLeft | GoForward deriving (Eq)
+
+type Stamina = Int
+
+moveWeight :: Move -> Int
+
+moveWeight GoForward = 3
+moveWeight _         = 4
+
+type Forest = [Move]
+
+testForest = [GoForward, GoLeft , GoRight] :: Forest
+
+
+
+
+
+
+
+solveForest':: Forest ->([Move],Stamina) -> (Forest,[Move],Stamina)
+
+{- solveForest' forest (moves,stamina)
+                    | [] (ms,st) = ([],ms,st)
+                    | m:forest' ((m':ms),st)  = if (m == m') then solveForest' forest' (ms,st - moveWeight m) 
+                                                                 else solveForest' m:forest' (ms,st - moveWeight m')
+                    | f  ([],st) = (f,[], st)
+-}
+
+
+solveForest' [] (ms, st) = ([], ms, st)
+solveForest' (m:forest') ((m':ms),st)  = if (m == m') then solveForest' forest' (ms,st - moveWeight m) 
+                                                                 else solveForest' (m:forest') (ms,st -moveWeight m')
+solveForest' f ([],st) = (f,[],st)
+
+solveForest :: Forest -> [Move] -> String
+solveForest forest moves = let (f,ms,st) = solveForest' forest (moves,10)
+                                in case f of 
+                                     [] ->   "YOU'VE FOUND THE EXIT!!"
+                                     _  -> if (ms == [] && st > 0) then  "You have " ++ show st ++" stamina, and you're still inside the Forest. Choose a path, brave adventurer: GoLeft, GoRight, or GoForward."                 
+                                                                  else   "You ran out of stamina and died -.-!"

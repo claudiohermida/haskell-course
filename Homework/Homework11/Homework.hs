@@ -2,6 +2,9 @@ import Data.List
 import System.CPUTime (getCPUTime)
 import System.Directory (doesFileExist, listDirectory)
 import Text.XHtml (thead)
+import Data.Foldable (foldr)
+import Control.Monad (foldM_)
+
 
 {-
 We imported some functions that you'll need to complete the homework.
@@ -15,12 +18,15 @@ You can hover over the functions to know what they do.
 
 {-
 -- Question 1 --
-Define an IO action that counts the number of all enteries in the current directory
+Define an IO action that counts the number of files in the current directory
 and prints it to the terminal inside a string message.
-(hidden files are not included)
 -}
 
--- listFiles :: IO ()
+listFiles :: IO ()
+
+listFiles = do
+  ld <- listDirectory "."
+  putStrLn $ show $ length ld
 
 {-
 -- Question 2 --
@@ -29,8 +35,14 @@ to a file called msg.txt, and after that, it reads the text from the msg.txt
 file and prints it back. Use the writeFile and readFile functions.
 -}
 
--- createMsg :: IO ()
+createMsg :: IO ()
 
+createMsg = do
+  putStrLn "Write a message:"
+  msg <- getLine
+  writeFile "./msg.txt" msg
+  readmsg <- readFile "./msg.txt"
+  putStrLn $ "Your stored message is: " ++ readmsg
 
 {-
 -- Context for Questions 3 and 4 --
@@ -71,7 +83,17 @@ Use the getCPUTime :: IO Integer function to get the CPU time before and after t
 The CPU time here is given in picoseconds (which is 1/1000000000000th of a second).
 -}
 
--- timeIO :: IO a -> IO ()
+timeIO :: IO a -> IO ()
+
+timeIO  action = do
+  startTime <- getCPUTime
+  action
+  endTime <- getCPUTime
+  putStrLn $ show $ fromIntegral (endTime - startTime)  / 1e12
+
+
+
+
 
 
 {-
@@ -81,7 +103,26 @@ and compares the time all three algorithms take to produce the largest prime bef
 limit. Print the number and time to the standard output.
 -}
 
--- benchmark :: IO ()
+-- runAndPrint :: (Integer -> [Integer]) -> Integer -> IO ()
+
+-- runAndPrint primes m = do
+--     putStrLn $ "largest prime " ++ show (last $ primes m)
+
+
+benchmark :: IO ()
+
+benchmark = do
+  input <- getLine
+  let validInput = all (`elem` "1234567890") input
+  if validInput
+    then do 
+      let test = read input :: Integer
+      timeIO $ return $ primes1 test
+      timeIO $ return $ primes2 test
+      timeIO $ return $ primes3 test
+    else do
+            putStrLn "You  must enter an integer [Press Ctrl-C to end]" 
+            benchmark
 
 {-
  -- Question 5 -- EXTRA CREDITS -- (In case the previous ones were too easy)
@@ -103,3 +144,82 @@ Below you can see an example output of how such a structure looks like:
 HINT: You can use the function doesFileExist, which takes in a FilePath and returns
 True if the argument file exists and is not a directory, and False otherwise.
 -}
+
+
+-- printDirectory :: IO ()
+-- splitList :: [a] -> ([a], a)
+-- splitList xs = (init xs, last xs)
+
+
+-- printDirectory = printDirectoryIndent "" "."
+
+
+-- printDirectoryIndent :: String -> FilePath -> IO ()
+-- printDirectoryIndent str dir =
+
+--    do 
+--       de <- doesFileExist dir
+--       if not de
+--          then do
+--               dirs <- listDirectory dir
+--               case dirs of
+--                   [] -> return ()
+--                   ds -> let (initds, lastd) = splitList ds
+--                             lastdAction = printDirectoryIndent (str ++ "└── ") lastd
+--                         in foldM_ (\_ d -> printDirectoryIndent (str ++ "├── ") d) () initds >> lastdAction
+--           else putStrLn $ str ++ dir
+
+data DirectoryStructure = File String | Folder String [IO DirectoryStructure]
+
+-- This action prints the structure neatly using the helper functions below.
+printDirectoryTree :: IO ()
+printDirectoryTree = do
+  putStrLn "."
+  structure <- returnStructure "."
+  printStructure structure 0
+
+-- Here, we give structure to our string by parsing it into our data type.
+returnStructure :: FilePath -> IO [IO DirectoryStructure]
+returnStructure filePath = do
+  contents <- listDirectory filePath
+  return $ map go contents
+ where
+  go fileName = do
+    let newFilePath = filePath ++ "/" ++ fileName
+    isFile <- doesFileExist newFilePath
+    if isFile
+      then return $ File fileName
+      else do
+        structure <- returnStructure newFilePath
+        return $ Folder fileName structure
+
+-- It prins the whole structure to the standard ouptut
+printStructure :: [IO DirectoryStructure] -> Int -> IO ()
+printStructure [] _ = return ()
+printStructure (x : xs) level = do
+  structure <- x
+  case structure of
+    File name -> do
+      printSpaces level
+      printElement xs name
+    Folder name ioList -> do
+      printSpaces level
+      printElement xs name
+      printStructure ioList (level + 1)
+  printStructure xs level
+
+-- It prins a single element to the standard ouptut
+printElement :: [IO DirectoryStructure] -> String -> IO ()
+printElement xs name =
+  if null xs
+    then putStrLn $ "└── " ++ name
+    else putStrLn $ "├── " ++ name
+
+-- It prins spaces to the standard ouptut
+printSpaces :: Int -> IO ()
+printSpaces n =
+  if n < 1
+    then return ()
+    else do
+      putStr "    "
+      printSpaces (n - 1)
